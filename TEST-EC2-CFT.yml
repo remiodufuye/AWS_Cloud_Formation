@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create a new EC2 Instance.
+Parameters:
+  AZ1Subnet:
+    Description: Choose an existing Subnet of the first Availability Zone.
+    Type: AWS::EC2::Subnet::Id
+    Default: subnet-0738269e9e8ec480d
+  AMI:
+    Description: The AMI ID for the image on the instances.
+    Type: String
+    Default: ami-0277155c3f0ab2930 
+    ConstraintDescription: Must be a valid image starting ami-.
+    AllowedPattern: .+
+  EC2InstanceType:
+    Description: EC2 Instance type to be used for indexers
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - c5.2xlarge
+      - c5.xlarge
+      - c5.large
+      - c4.large
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  ServerSecurityGroup:
+    Description: Select the security group that will be applied to the instances. 
+    Type: AWS::EC2::SecurityGroup::Id
+    Default: sg-0f797bdb63b40d3a9
+  KeyName:
+    Description: EC2 KeyPair to enable SSH access to the Server
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: KeyPair Must be created prior to adding it here .
+    Default: rahkeypair
+Resources:
+  NewServerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref "AMI"
+      SecurityGroupIds:
+        - !Ref "ServerSecurityGroup"
+      SubnetId: !Ref "AZ1Subnet"
+      InstanceType: !Ref "EC2InstanceType"
+      KeyName: !Ref "KeyName"
+      Tags:
+        - Key: Stack
+          Value: !Ref "AWS::StackId"
+        - Key: role
+          Value: instance
+        - Key: Name
+          Value: "TestEC2Instance" 
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: "100"
+            DeleteOnTermination: true
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Deployment
+        Parameters:
+          - EC2InstanceType
+      - Label:
+          default: Availability Zone 
+        Parameters:
+          - AZ1Subnet
+
+      - Label:
+          default: Security Group 
+        Parameters:
+          - ServerSecurityGroup
+
+Outputs:
+  ServerIP:
+    Value: !GetAtt "NewServerInstance.PrivateIp"

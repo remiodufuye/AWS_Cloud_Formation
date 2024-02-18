@@ -1,0 +1,63 @@
+Description: "Template that creates Backup Plan - Backup Vault - BackUp Selection"
+Parameters:
+  BackupVaultName:
+    Type: String
+    Default: "My-Backup-Vault"
+  BackupPlanName:
+    Type: String
+    Default: "My-Backup-Plan"
+  BackupSelectionName: 
+    Type: String
+    Default: "DailyBackupSelection"
+  BackupPlanTagValue:
+    Type: String
+    Default: "Daily-Backup"
+  RuleName1:
+    Type: String
+    Default: "DailyBackupRule"
+  ScheduleExpression:
+    Type: String
+    Default: "cron(0 12 * * ? *)"
+  RecoveryPointTagValue:
+    Type: String
+    Default: "DailyBackUpRecoveryPoint"
+  DeleteAfterDays:
+    Type: Number
+    Default: 7
+Resources:
+  DailyBackUpVault:
+    Type: "AWS::Backup::BackupVault"
+    Properties:
+      BackupVaultName: !Ref BackupVaultName
+  DailyBackupPlan:
+    Type: "AWS::Backup::BackupPlan"
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Ref BackupPlanName
+        BackupPlanRule:
+          - RuleName: !Ref RuleName1
+            TargetBackupVault: !Ref BackupVaultName
+            ScheduleExpression: !Ref ScheduleExpression
+            RecoveryPointTags:
+              test-recovery-point-key-1: !Ref RecoveryPointTagValue
+            Lifecycle:
+              DeleteAfterDays: !Ref DeleteAfterDays
+      BackupPlanTags:
+        test-key-1: !Ref BackupPlanTagValue
+    DependsOn: DailyBackUpVault
+ 
+
+  BasicBackupSelection:
+    Type: 'AWS::Backup::BackupSelection'
+    Properties:
+      BackupPlanId: !Ref DailyBackupPlan
+      BackupSelection:
+        SelectionName: !Ref BackupSelectionName
+        IamRoleArn: arn:aws:iam::<AWS-ACCOUNT-NUMBER>:role/AWSBackupDefaultServiceRole
+        Resources:
+          - 'arn:aws:ec2:*:*:instance/*'
+        Conditions:
+          StringEquals:
+            - ConditionKey: 'aws:ResourceTag/BackUpFrequency'
+              ConditionValue: Daily
+

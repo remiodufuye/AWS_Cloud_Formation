@@ -4,11 +4,11 @@ Parameters:
   AZ1Subnet:
     Description: Choose an existing Subnet of the first Availability Zone.
     Type: AWS::EC2::Subnet::Id
-    Default: subnet-0738269e9e8ec480d
+    Default: <specify subnet >
   AMI:
     Description: The AMI ID for the image on the instances.
     Type: String
-    Default: ami-0277155c3f0ab2930 
+    Default: <specify AMI HERE > 
     ConstraintDescription: Must be a valid image starting ami-.
     AllowedPattern: .+
   EC2InstanceType:
@@ -27,12 +27,12 @@ Parameters:
   ServerSecurityGroup:
     Description: Select the security group that will be applied to the instances. 
     Type: AWS::EC2::SecurityGroup::Id
-    Default: sg-0f797bdb63b40d3a9
+    Default: <specify security group >
   KeyName:
     Description: EC2 KeyPair to enable SSH access to the Server
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: KeyPair Must be created prior to adding it here .
-    Default: rahkeypair
+    Default: <specify keypair >
 Resources:
   NewServerInstance:
     Type: AWS::EC2::Instance

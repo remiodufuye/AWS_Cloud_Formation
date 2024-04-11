@@ -1,0 +1,461 @@
+Description:  This template deploys a VPC with one public subnet, and four private subnets (privSn-1 to privSn-4) with outbound internet access via a NAT in the public subnet. 
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names. Use camelCase as naming convention
+    Type: String
+    Default: spaceXTestEnv
+
+  VpcCIDR:
+    Description: CIDR of the VPC as taken from the reservation table
+    Type: String
+    Default: 172.24.8.0/21
+
+  PrivateSubnet1CIDR:
+    Description: CIDR of the private subnet in the first Availability Zone. Default 172.24.n.0/24 with n from the VPC CIDR
+    Type: String
+    Default: 172.24.8.0/24
+
+  PrivateSubnet2CIDR:
+    Description: CIDR of the private subnet in the first Availability Zone. Default 172.24.n+1.0/24 with n from the VPC CIDR
+    Type: String
+    Default: 172.24.9.0/24
+    
+  PrivateSubnet3CIDR:
+    Description: CIDR of the first private subnet with outbound internet access. Default 172.24.n+2.0/24 with n from the VPC CIDR
+    Type: String
+    Default: 172.24.10.0/24
+    
+  PrivateSubnet4CIDR:
+    Description: CIDR of the second private subnet with outbound internet access. Default 172.24.n+3.0/24 with n from the VPC CIDR
+    Type: String
+    Default: 172.24.11.0/24
+    
+  PublicSubnet1CIDR:
+    Description: CIDR of the public subnet. Default 172.24.n+4.0/24
+    Type: String
+    Default: 172.24.12.0/24
+    
+
+Resources: 
+
+  TransitGateway:
+    Type: AWS::EC2::TransitGateway
+    Properties:
+      Description: "SpaceX Transit Gateway"
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-vpc
+        - Key: remicodes:type
+          Value: vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-igw
+        - Key: remicodes:type
+          Value: igw
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+ 
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-pubSn-1
+        - Key: remicodes:type
+          Value: pubSn
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privSn-1
+        - Key: remicodes:type
+          Value: privSn
+        - Key: remicodes:connectivity
+          Value: connected
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privSn-2
+        - Key: remicodes:type
+          Value: privSn
+        - Key: remicodes:connectivity
+          Value: connected
+          
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet3CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privSn-3
+        - Key: remicodes:type
+          Value: privSn
+        - Key: remicodes:connectivity
+          Value: connected
+                  
+  PrivateSubnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+      CidrBlock: !Ref PrivateSubnet4CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privSn-4
+        - Key: remicodes:type
+          Value: privSn
+        - Key: remicodes:connectivity
+          Value: isolated
+
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-pubRtb
+        - Key: remicodes:type
+          Value: pubRtb
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privRtb-1
+        - Key: remicodes:type
+          Value: privRtb
+
+      
+  TGWPrivateRoute1:
+    Type: AWS::EC2::Route
+    DependsOn: TransitGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 172.16.0.0/16
+      TransitGatewayId: !Ref TransitGateway
+      
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    DependsOn: TransitGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privRtb-2
+        - Key: remicodes:type
+          Value: privRtb
+      
+  TGWPrivateRoute2:
+    Type: AWS::EC2::Route
+    DependsOn: TransitGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 172.16.0.0/16
+      TransitGatewayId: !Ref TransitGateway
+      
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    DependsOn: TransitGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+ 
+  PrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privRtb-3
+        - Key: remicodes:type
+          Value: privRtb
+
+  DefaultPrivateRoute3:
+    Type: AWS::EC2::Route
+    DependsOn: TransitGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+      
+  TGWPrivateRoute3:
+    Type: AWS::EC2::Route
+    DependsOn: TransitGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 172.16.0.0/16
+      TransitGatewayId: !Ref TransitGateway
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      SubnetId: !Ref PrivateSubnet3    
+      
+  PrivateRouteTable4:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-privRtb-4
+        - Key: remicodes:type
+          Value: privRtb
+
+  DefaultPrivateRoute4:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable4
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable4
+      SubnetId: !Ref PrivateSubnet4    
+
+  BasicAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group on private subnets allowing basic access, Please adjust to your needs"
+      GroupName: !Sub platform-${EnvironmentName}-basicAccessSgr
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 172.16.0.0/12
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 172.16.0.0/12
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: !Ref VpcCIDR
+          
+  SecurityGroupLambda:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: "Security group on private subnets for lambda functions"
+      GroupName: !Sub platform-${EnvironmentName}-lambdaSg
+      VpcId: !Ref VPC
+      Tags:
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-lambdaSg
+        - Key: remicodes:type
+          Value: lambdaSg
+
+  TransitGatewayAttachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      Tags: 
+        - Key: remicodes:env
+          Value: !Ref EnvironmentName
+        - Key: remicodes:domain
+          Value: platform
+        - Key: Name
+          Value: !Sub platform-${EnvironmentName}-tgwAtt
+        - Key: remicodes:type
+          Value: tgwAtt
+      TransitGatewayId: !Ref TransitGateway
+      VpcId: !Ref VPC
+      
+      
+  S3VpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      RouteTableIds: 
+        - !Ref PrivateRouteTable1
+        - !Ref PrivateRouteTable2
+      ServiceName: !Join
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !Ref VPC
+      VpcEndpointType: Gateway
+
+Outputs:
+  VPC:
+    Description: A reference to the created VPC
+    Value: !Ref VPC
+
+  PublicSubnets:
+    Description: The public subnet
+    Value: !Ref PublicSubnet1
+
+  PrivateSubnets:
+    Description: A list of the private subnets
+    Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, !Ref PrivateSubnet3, !Ref PrivateSubnet4 ]]
+
+  PublicSubnet1:
+    Description: A reference to the public subnet in the 1st Availability Zone
+    Value: !Ref PublicSubnet1
+
+  PrivateSubnet1:
+    Description: A reference to the private subnet without NAT access in the 1st Availability Zone
+    Value: !Ref PrivateSubnet1
+
+  PrivateSubnet2:
+    Description: A reference to the private subnet without NAT access in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet2
+
+  PrivateSubnet3:
+    Description: A reference to the private subnet with NAT access in the 1st Availability Zone
+    Value: !Ref PrivateSubnet3
+    
+  PrivateSubnet4:
+    Description: A reference to the private subnet with NAT access in the 2nd Availability Zone
+    Value: !Ref PrivateSubnet4
+    
+  BasicAccessSecurityGroup:
+    Description: Security group with basic access
+    Value: !Ref BasicAccessSecurityGroup
+    
+  LambdaSecurityGroup:
+    Description: Security group for lambda
+    Value: !Ref SecurityGroupLambda
